@@ -37,6 +37,7 @@ def calculate_roc_metrics(cases, controls, name="Feature"):
 
     statistic, p_value = mannwhitneyu(cases, controls, alternative='two-sided')
 
+    # Print to console
     print(f"\n{name}")
     print(f"J: {best_j:.4f}")
     print(f"Threshold: {thresh:.4f}")
@@ -48,17 +49,45 @@ def calculate_roc_metrics(cases, controls, name="Feature"):
     print(f"LR+: {lr_plus:.4f} | LR-: {lr_minus:.4f} | OR: {odds_ratio:.4f}")
     print(f"Kappa: {kappa:.4f} | p-value: {p_value:.4f}\n")
 
-    st.write(name)
+    # Display title
+    st.write(f"## {name}")
     
-    col1, col2, col3 = st.columns(3)
-    col1.metric("J", f"{best_j:.4f}")
-    col2.metric("Threshold", f"{thresh:.4f}")
-    col3.metric("AUC", f"{auc_val:.4f}")
+    # Create metrics table
+    metrics_data = {
+        'Parameters': [
+            'Threshold',
+            'Sensitivity',
+            'Specificity',
+            'AUC',
+            'PPV',
+            'NPV',
+            'Accuracy',
+            'LR+',
+            'LR-',
+            'OR',
+            'AUC p-value'
+        ],
+        'Value': [
+            f"{thresh:.4f}",
+            f"{sens:.4f}",
+            f"{spec:.4f}",
+            f"{auc_val:.4f}",
+            f"{ppv:.4f}",
+            f"{npv:.4f}",
+            f"{accuracy:.4f}",
+            f"{lr_plus:.4f}",
+            f"{lr_minus:.4f}",
+            f"{odds_ratio:.4f}",
+            f"{p_value:.4f}"
+        ]
+    }
     
-    col1, col2 = st.columns(2)
-    col1.metric("Sensitivity", f"{sens:.4f}")
-    col2.metric("Specificity", f"{spec:.4f}")
+    metrics_df = pd.DataFrame(metrics_data)
     
+    # Display the table
+    st.dataframe(metrics_df, use_container_width=True)
+    
+    # Plot ROC curve
     fig, ax = plt.subplots(figsize=(7,6))
     ax.plot(fpr, tpr, linewidth=2.5, label=f'AUC={auc_val:.3f}')
     ax.scatter(fpr[best_idx], tpr[best_idx], c='red', s=120, zorder=5, label=f'J={best_j:.3f}')
@@ -70,16 +99,10 @@ def calculate_roc_metrics(cases, controls, name="Feature"):
     ax.legend()
     st.pyplot(fig)
     plt.close(fig)
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("PPV", f"{ppv:.4f}")
-    col2.metric("NPV", f"{npv:.4f}")
-    col3.metric("Accuracy", f"{accuracy:.4f}")
-    
-    st.metric("p-value", f"{p_value:.4f}")
 
 
-sheet = st.text_input("Sheet name", key="Sheet Name" )
+# Input fields
+sheet = st.text_input("Sheet name", key="Sheet Name")
 cases_col = st.text_input("Cases column", key="case")
 controls_col = st.text_input("Controls column", key="control")
 graph_name = st.text_input("Graph name", key="graph")
