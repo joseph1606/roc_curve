@@ -1,107 +1,12 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve as sklearn_roc_curve, auc, confusion_matrix
-from scipy.stats import mannwhitneyu
-
-def calculate_roc_metrics(cases, controls, name="Feature"):
-    y = pd.concat([pd.Series(1, index=cases.index),
-                   pd.Series(0, index=controls.index)])
-    scores = pd.concat([cases, controls])
-
-    fpr, tpr, thresholds = sklearn_roc_curve(y, scores)
-    auc_val = auc(fpr, tpr)
-
-    J_scores = tpr - fpr
-    best_idx = np.argmax(J_scores)
-    best_j = J_scores[best_idx]
-    sens = tpr[best_idx]
-    spec = 1 - fpr[best_idx]
-    thresh = thresholds[best_idx]
-
-    y_pred = (scores >= thresh).astype(int)
-    cm = confusion_matrix(y, y_pred)
-    tn, fp, fn, tp = cm.ravel()
-
-    total = tn + fp + fn + tp
-    ppv = tp / (tp + fp) if (tp + fp) > 0 else 0
-    npv = tn / (tn + fn) if (tn + fn) > 0 else 0
-    accuracy = (tp + tn) / total
-    lr_plus = sens / fpr[best_idx] if fpr[best_idx] > 0 else 0
-    lr_minus = (1 - sens) / spec if spec > 0 else 0
-    odds_ratio = lr_plus / lr_minus if lr_minus > 0 else 0
-
-    expected_correct = ((tp+fn)*(tp+fp) + (tn+fp)*(tn+fn)) / total**2
-    kappa = (accuracy - expected_correct) / (1 - expected_correct) if expected_correct < 1 else 0
-
-    statistic, p_value = mannwhitneyu(cases, controls, alternative='two-sided')
-
-    # Print to console
-    print(f"\n{name}")
-    print(f"J: {best_j:.4f}")
-    print(f"Threshold: {thresh:.4f}")
-    print(f"AUC: {auc_val:.4f}")
-    print(f"Sensitivity: {sens:.4f}")
-    print(f"Specificity: {spec:.4f}")
-    print(f"TN: {int(tn)} | FP: {int(fp)} | FN: {int(fn)} | TP: {int(tp)}")
-    print(f"PPV: {ppv:.4f} | NPV: {npv:.4f} | Accuracy: {accuracy:.4f}")
-    print(f"LR+: {lr_plus:.4f} | LR-: {lr_minus:.4f} | OR: {odds_ratio:.4f}")
-    print(f"Kappa: {kappa:.4f} | p-value: {p_value:.4f}\n")
-
-    # Display title
-    st.write(f"## {name}")
-    
-    # Create metrics table
-    metrics_data = {
-        'Parameters': [
-            'Threshold',
-            'Sensitivity',
-            'Specificity',
-            'AUC',
-            'PPV',
-            'NPV',
-            'Accuracy',
-            'LR+',
-            'LR-',
-            'OR',
-            'AUC p-value'
-        ],
-        'Value': [
-            f"{thresh:.4f}",
-            f"{sens:.4f}",
-            f"{spec:.4f}",
-            f"{auc_val:.4f}",
-            f"{ppv:.4f}",
-            f"{npv:.4f}",
-            f"{accuracy:.4f}",
-            f"{lr_plus:.4f}",
-            f"{lr_minus:.4f}",
-            f"{odds_ratio:.4f}",
-            f"{p_value:.4f}"
-        ]
-    }
-    
-    metrics_df = pd.DataFrame(metrics_data)
-    
-    # Display the table
-    st.dataframe(metrics_df, use_container_width=True)
-    
-    # Plot ROC curve
-    fig, ax = plt.subplots(figsize=(7,6))
-    ax.plot(fpr, tpr, linewidth=2.5, label=f'AUC={auc_val:.3f}')
-    ax.scatter(fpr[best_idx], tpr[best_idx], c='red', s=120, zorder=5, label=f'J={best_j:.3f}')
-    ax.plot([0,1],[0,1],'k--', alpha=0.7)
-    ax.set_xlabel('False Positive Rate')
-    ax.set_ylabel('True Positive Rate')
-    ax.set_title(f'{name}')
-    ax.grid(True, alpha=0.3)
-    ax.legend()
-    st.pyplot(fig)
-    plt.close(fig)
+from functions import calculate_roc_metrics, create_boxplot
 
 
-# Input fields
+st.title("ROC Curve & Boxplot Analysis")
+
+analysis_type = st.radio("Select Analysis:", ["ROC Curve", "Boxplot"])
+
 sheet = st.text_input("Sheet name", key="Sheet Name")
 cases_col = st.text_input("Cases column", key="case")
 controls_col = st.text_input("Controls column", key="control")
@@ -113,6 +18,9 @@ if uploaded_file is not None:
     try:
         df = pd.read_excel(uploaded_file, sheet_name=sheet)
         st.dataframe(df)
+        
+        csv = df.to_csv(index=False)
+        st.download_button("Download Data", csv, "data.csv", "text/csv")
         
         if not cases_col or not controls_col:
             st.warning("Enter both column names")
@@ -131,7 +39,10 @@ if uploaded_file is not None:
             elif len(cases) < 2 or len(controls) < 2:
                 st.error(f"Need at least 2 values in each column")
             else:
-                calculate_roc_metrics(cases, controls, graph_name)
+                if analysis_type == "ROC Curve":
+                    calculate_roc_metrics(cases, controls, graph_name)
+                else:
+                    create_boxplot(cases, controls, cases_col, controls_col, graph_name)
                 
     except Exception as e:
         st.error(f"Error: {e}")
