@@ -4,7 +4,7 @@ from functions import calculate_roc_metrics, create_boxplot
 
 st.title("Statistical Analysis Dashboard")
 
-uploaded_file = st.file_uploader("Excel file", type='xlsx')
+uploaded_file = st.file_uploader("Excel file", type='xlsx', key='file_uploader')
 
 if uploaded_file is not None:
     sheet = st.text_input("Sheet name", key="Sheet Name")
