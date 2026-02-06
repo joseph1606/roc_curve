@@ -17,11 +17,11 @@ if uploaded_file is not None:
             csv = df.to_csv(index=False)
             st.download_button("Download Data", csv, "data.csv", "text/csv")
             
-            analysis_type = st.radio("Select Analysis:", ["ROC Curve", "Boxplot"])
-            
             cases_col = st.text_input("Cases column", key="case")
             controls_col = st.text_input("Controls column", key="control")
-            graph_name = st.text_input("Graph name", key="graph")
+            experiment_name = st.text_input("Experiment name", key="experiment")
+            
+            analysis_type = st.radio("Select Analysis:", ["ROC Curve", "Boxplot"])
             
             if cases_col and controls_col:
                 if cases_col not in df.columns:
@@ -40,9 +40,9 @@ if uploaded_file is not None:
                         st.error(f"Need at least 2 values in each column")
                     elif len(cases) >= 2 and len(controls) >= 2:
                         if analysis_type == "ROC Curve":
-                            calculate_roc_metrics(cases, controls, graph_name)
+                            calculate_roc_metrics(cases, controls, experiment_name)
                         elif analysis_type == "Boxplot":
-                            create_boxplot(cases, controls, cases_col, controls_col, graph_name)
+                            create_boxplot(cases, controls, cases_col, controls_col, experiment_name)
             elif cases_col or controls_col:
                 st.warning("Enter both column names")
                 
