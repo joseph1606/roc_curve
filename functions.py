@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve as sklearn_roc_curve, auc, confusion_matrix
 from scipy.stats import mannwhitneyu
+import io
 
 
 def calculate_roc_metrics(cases, controls, name="Feature"):
@@ -40,6 +41,23 @@ def calculate_roc_metrics(cases, controls, name="Feature"):
 
     st.write(f"## {name}")
     
+    fig, ax = plt.subplots(figsize=(7,6))
+    ax.plot(fpr, tpr, linewidth=2.5, label=f'AUC={auc_val:.3f}')
+    ax.scatter(fpr[best_idx], tpr[best_idx], c='red', s=120, zorder=5, label=f'J={best_j:.3f}')
+    ax.plot([0,1],[0,1],'k--', alpha=0.7)
+    ax.set_xlabel('False Positive Rate')
+    ax.set_ylabel('True Positive Rate')
+    ax.set_title(f'{name}')
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    st.pyplot(fig)
+    
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=300, bbox_inches='tight')
+    buf.seek(0)
+    st.download_button("Download Chart", buf, f"{name}_roc.png", "image/png")
+    plt.close(fig)
+    
     metrics_data = {
         'Parameters': [
             'Threshold',
@@ -74,18 +92,6 @@ def calculate_roc_metrics(cases, controls, name="Feature"):
     
     csv = metrics_df.to_csv(index=False)
     st.download_button("Download Metrics", csv, f"{name}_metrics.csv", "text/csv")
-    
-    fig, ax = plt.subplots(figsize=(7,6))
-    ax.plot(fpr, tpr, linewidth=2.5, label=f'AUC={auc_val:.3f}')
-    ax.scatter(fpr[best_idx], tpr[best_idx], c='red', s=120, zorder=5, label=f'J={best_j:.3f}')
-    ax.plot([0,1],[0,1],'k--', alpha=0.7)
-    ax.set_xlabel('False Positive Rate')
-    ax.set_ylabel('True Positive Rate')
-    ax.set_title(f'{name}')
-    ax.grid(True, alpha=0.3)
-    ax.legend()
-    st.pyplot(fig)
-    plt.close(fig)
 
 
 def create_boxplot(cases, controls, cases_col, controls_col, name="Feature"):
@@ -103,17 +109,25 @@ def create_boxplot(cases, controls, cases_col, controls_col, name="Feature"):
     ax.grid(True, alpha=0.3, axis='y')
     
     st.pyplot(fig)
+    
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=300, bbox_inches='tight')
+    buf.seek(0)
+    st.download_button("Download Chart", buf, f"{name}_boxplot.png", "image/png")
     plt.close(fig)
     
+    statistic, p_value = mannwhitneyu(cases, controls, alternative='two-sided')
+    
     summary_data = {
-        'Statistic': ['Count', 'Mean', 'Median', 'Std Dev', 'Min', 'Max'],
+        'Statistic': ['Count', 'Mean', 'Median', 'Std Dev', 'Min', 'Max', 'Mann-Whitney p-value'],
         cases_col: [
             len(cases),
             f"{cases.mean():.4f}",
             f"{cases.median():.4f}",
             f"{cases.std():.4f}",
             f"{cases.min():.4f}",
-            f"{cases.max():.4f}"
+            f"{cases.max():.4f}",
+            f"{p_value:.4f}"
         ],
         controls_col: [
             len(controls),
@@ -121,7 +135,8 @@ def create_boxplot(cases, controls, cases_col, controls_col, name="Feature"):
             f"{controls.median():.4f}",
             f"{controls.std():.4f}",
             f"{controls.min():.4f}",
-            f"{controls.max():.4f}"
+            f"{controls.max():.4f}",
+            ""
         ]
     }
     
@@ -130,6 +145,3 @@ def create_boxplot(cases, controls, cases_col, controls_col, name="Feature"):
     
     csv = summary_df.to_csv(index=False)
     st.download_button("Download Statistics", csv, f"{name}_stats.csv", "text/csv")
-    
-    statistic, p_value = mannwhitneyu(cases, controls, alternative='two-sided')
-    st.write(f"**Mann-Whitney U p-value:** {p_value:.4f}")
