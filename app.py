@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from functions import calculate_roc_metrics, create_boxplot
 
-st.title("ROC Curve & Boxplot Analysis")
+st.title("Statistical Analysis Dashboard")
 
 uploaded_file = st.file_uploader("Excel file", type='xlsx')
 
